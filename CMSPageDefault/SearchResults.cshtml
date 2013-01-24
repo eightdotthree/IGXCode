@@ -1,0 +1,112 @@
+@model Ingeniux.Runtime.ICMSPage
+@using Ingeniux.Runtime
+
+@{
+	Layout = "~/Views/Shared/_LevelLayout.cshtml";
+}
+
+@section FooterIncludes 
+{
+}
+
+@{
+    var gsp = Model.Element("GoogleCSE").Element("GSP");
+    var time = gsp.Element("TM").Value;
+    var totalResults = Convert.ToInt32(gsp.Element("RES").Element("M").Value);
+    var results = gsp.Element("RES").Elements("R");
+
+    <div class="searchResultsStats">
+        About @totalResults results (@time seconds)
+    </div>
+
+    <ul class="searchResults clearfix">
+
+        @foreach (var result in results)
+        {
+            var title = @Html.Raw(@result.Element("T").Value);
+            var link = @result.Element("U").Value;
+            var body = @Html.Raw(@result.Element("S").Value);
+
+            <li class="searchResult">
+                <h2 class="searchResultHeading">
+                    <a href="@link" class="searchResultLink">@title</a>
+                </h2>
+                <cite class="searchResultCite">
+                    @link
+                </cite>
+                <p class="searchResultText">
+                    @body
+                </p>
+            </li>
+        }
+
+    </ul>
+
+    <ul class="searchResultsPaging">
+
+        @{
+            var searchTerm = gsp.Element("Q").Value;
+            var startNumber = Convert.ToInt32(gsp.Element("RES").GetAttributeValue("SN"));
+            var endNumber = Convert.ToInt32(gsp.Element("RES").GetAttributeValue("EN"));
+            var num = Convert.ToInt32(Model.XPathSelectElement("//PARAM[@name='num']").GetAttributeValue("value"));
+            var index = Convert.ToInt32(Model.XPathSelectElement("//PARAM[@name='index']").GetAttributeValue("value"));
+
+            var breadcrumbs = Model.GetNavigation("Breadcrumbs").Pages;
+            var breadcrumbsCount = breadcrumbs.Count() - 1;
+
+            var currentPageHref = breadcrumbs.ToArray()[breadcrumbsCount].GetAttributeValue("URL");
+            var nextPageHref = currentPageHref + "?index=" + (index + 1) + "&start=" + endNumber + "&q=" + searchTerm;
+            var previousPageHref = currentPageHref + "?index=" + (index - 1) + "&start=" + (startNumber - num - 1) + "&q=" + searchTerm;
+        }
+
+        @{
+            if(startNumber > 1)
+            {
+                <li class="previous">
+                    <a href="@previousPageHref" title="Previous page of search results">Previous</a>
+                </li>                
+            }
+        }
+
+        @{
+            var thing = @Convert.ToInt32(startNumber / num);
+
+            //var startIndex = thing % 10 == 0 ? 0 : thing - 5;
+            var startIndex = thing < 5 ? 0 : thing - 5;
+            var totalPages = Convert.ToInt32((totalResults / num) <= num ? (totalResults / num) : num - 1);
+
+            for (var i = startIndex; i <= totalPages + startIndex; i++)
+            {
+                var displayIndex = i + 1;
+                var indexHref = currentPageHref + "?index=" + (i + 1) + "&start=" + (i * num) + "&q=" + searchTerm;
+
+                <li>
+                    @{
+                        if(index != displayIndex)
+                        {
+                            <a href="@indexHref" title="Page @displayIndex of search results">
+                                @{
+                                    @displayIndex;
+                                }
+                            </a>
+                        }
+                        else
+                        {
+                            <strong>@displayIndex</strong>
+                        }
+                    }
+                </li>
+            }
+        }
+
+        @{
+            if(endNumber < totalResults)
+            {
+                <li class="next">
+                    <a href="@nextPageHref" title="Next page of search results">Next</a>
+                </li>
+            }
+        }
+
+    </ul>
+}
